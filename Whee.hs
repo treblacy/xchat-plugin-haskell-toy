@@ -5,24 +5,30 @@ import Foreign.C
 import Data.IORef
 
 newtype XChat = XChat (Ptr ())
+newtype Hook = Hook (Ptr ())
 
-foreign export ccall "xchat_plugin_init" whee ::
+foreign export ccall xchat_plugin_init ::
     XChat -> Ptr CString -> Ptr CString -> Ptr CString -> CString -> IO CInt
 
-whee xchat name desc vers _ = do
+xchat_plugin_init xchat name desc vers _ = do
     newCAString "whee" >>= poke name
     newCAString "a plugin in haskell" >>= poke desc
     newCAString "1.0" >>= poke vers
     register_increase xchat
     return 1  -- 1 means no problem
 
-foreign import ccall xchat_hook_command :: XChat -> CString -> CInt -> FunPtr Command_Hook -> CString -> Ptr a -> IO (Ptr hook)
+-- foreign export ccall xchat_plugin_deinit :: XChat -> IO CInt
+-- xchat_plugin_deinit _ = return 1
 
-foreign import ccall "wrapper" mk_Command_Hook :: Command_Hook -> IO (FunPtr Command_Hook)
+type Command_Hook a = Ptr CString -> Ptr CString -> Ptr a -> IO CInt
 
-type Command_Hook = Ptr () -> Ptr () -> Ptr () -> IO CInt
+foreign import ccall xchat_hook_command ::
+    XChat -> CString -> CInt -> FunPtr (Command_Hook a) -> CString -> Ptr a -> IO Hook
 
 foreign import ccall xchat_print :: XChat -> CString -> IO ()
+
+foreign import ccall "wrapper" mk_Command_Hook ::
+    Command_Hook a -> IO (FunPtr (Command_Hook a))
 
 register_increase xchat = do
     ref <- newIORef 0
