@@ -1,7 +1,9 @@
+{-# LANGUAGE MagicHash #-}
 module Whee() where
 
 import Foreign
 import Foreign.C
+import GHC.Exts(Ptr(..))
 import Data.IORef
 
 newtype XChat = XChat (Ptr ())
@@ -11,9 +13,9 @@ foreign export ccall xchat_plugin_init ::
     XChat -> Ptr CString -> Ptr CString -> Ptr CString -> CString -> IO CInt
 
 xchat_plugin_init xchat name desc vers _ = do
-    newCAString "whee" >>= poke name
-    newCAString "a plugin in haskell" >>= poke desc
-    newCAString "1.0" >>= poke vers
+    poke name (Ptr "whee"#)
+    poke desc (Ptr "a plugin in haskell"#)
+    poke vers (Ptr "1.0"#)
     register_increase xchat
     return 1  -- 1 means no problem
 
@@ -32,10 +34,9 @@ foreign import ccall "wrapper" mk_Command_Hook ::
 
 register_increase xchat = do
     ref <- newIORef 0
-    cmdname <- newCAString "increase"
-    helpmsg <- newCAString "increases an internal number, and prints"
     hook <- mk_Command_Hook (increase xchat ref)
-    xchat_hook_command xchat cmdname 0 hook helpmsg nullPtr
+    xchat_hook_command xchat (Ptr "increase"#) 0 hook
+      (Ptr "increases an internal number, and prints"#) nullPtr
 
 increase xchat ref _ _ _ = do
     n <- readIORef ref
